@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>YT単語帳</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0f0f0f;--surface:#1a1a1a;--surface2:#242424;--border:rgba(255,255,255,0.08);--text:#f0f0f0;--muted:#888;--blue:#3b82f6;--blue-dark:#2563eb;--green:#22c55e;--green-bg:rgba(34,197,94,0.15)}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif}
+.app{display:flex;flex-direction:column;height:100vh;max-width:480px;margin:0 auto}
+.header{display:flex;align-items:center;padding:14px 16px 10px;border-bottom:1px solid var(--border);gap:10px}
+.header-icon{width:28px;height:28px;background:#ff0000;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.header-icon svg{width:14px;height:14px;fill:white}
+.header-title{font-size:17px;font-weight:600;flex:1}
+.header-badge{background:var(--green-bg);color:var(--green);font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px}
+.tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border)}
+.tab{flex:1;padding:12px;text-align:center;font-size:14px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:600}
+.view{display:none;flex:1;flex-direction:column;overflow:hidden}
+.view.active{display:flex}
+.input-area{padding:12px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.url-row{display:flex;gap:8px}
+.url-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:14px;color:var(--text);outline:none}
+.url-input::placeholder{color:var(--muted)}
+.btn-fetch{background:var(--blue);color:white;border:none;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer}
+.btn-fetch:disabled{opacity:0.5}
+.selects{display:flex;gap:8px}
+.sel{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--text);outline:none}
+.hint{font-size:11px;color:var(--muted);padding:6px 14px;background:var(--surface);border-bottom:1px solid var(--border)}
+.transcript{flex:1;overflow-y:auto;padding:14px;-webkit-overflow-scrolling:touch}
+.seg{margin-bottom:12px;line-height:2.2;font-size:15px}
+.ts{font-size:10px;color:var(--muted);font-weight:600;margin-right:6px;background:var(--surface2);padding:2px 5px;border-radius:4px}
+.w{cursor:pointer;border-radius:4px;padding:2px 4px;display:inline;-webkit-tap-highlight-color:transparent}
+.w.saved{background:var(--green-bg);color:var(--green)}
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:2rem}
+.empty-icon{width:56px;height:56px;background:var(--surface2);border-radius:16px;display:flex;align-items:center;justify-content:center}
+.empty-icon svg{width:26px;height:26px;stroke:var(--muted)}
+.empty-text{font-size:14px;color:var(--muted);text-align:center;line-height:1.7}
+.status{font-size:12px;color:var(--muted);padding:8px 14px;background:var(--surface);border-top:1px solid var(--border);min-height:34px;display:flex;align-items:center;gap:6px}
+.spinner{width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin 0.6s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.stats{display:flex;gap:10px;padding:12px;background:var(--surface);border-bottom:1px solid var(--border)}
+.stat{flex:1;background:var(--surface2);border-radius:10px;padding:10px;text-align:center}
+.stat-n{font-size:22px;font-weight:700}
+.stat-l{font-size:11px;color:var(--muted);margin-top:2px}
+.vocab-list{flex:1;overflow-y:auto;padding:10px 12px;-webkit-overflow-scrolling:touch}
+.vcard{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px}
+.vcard-body{flex:1;min-width:0}
+.vcard-word{font-size:16px;font-weight:600}
+.vcard-trans{font-size:14px;color:var(--blue);margin-top:4px;font-weight:500}
+.vcard-trans.pending{color:var(--muted);font-style:italic}
+.vcard-ctx{font-size:11px;color:var(--muted);margin-top:5px;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.del-btn{background:rgba(255,68,68,0.1);border:none;color:#ff4444;width:28px;height:28px;border-radius:8px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.action-bar{padding:12px;background:var(--surface);border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.btn-export{background:var(--blue);color:white;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;width:100%}
+.btn-row{display:flex;gap:8px}
+.btn-sub{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:10px;font-size:13px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-icon"><svg viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0C.488 3.45.029 5.804 0 12c.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0C23.512 20.55 23.971 18.196 24 12c-.029-6.185-.484-8.549-4.385-8.816zM9 16V8l8 3.993L9 16z"/></svg></div>
+    <span class="header-title">YT単語帳</span>
+    <span class="header-badge" id="nav-count">0語</span>
+  </div>
+  <div class="tabs">
+    <div class="tab active" id="tab-t" onclick="sw('t')">字幕</div>
+    <div class="tab" id="tab-v" onclick="sw('v')">単語帳</div>
+  </div>
+  <div class="view active" id="view-t">
+    <div class="input-area">
+      <div class="url-row">
+        <input class="url-input" id="yu" type="url" placeholder="YouTube URLを貼り付け..."/>
+        <button class="btn-fetch" id="fb" onclick="fetchSubs()">取得</button>
+      </div>
+      <div class="selects">
+        <select class="sel" id="lang">
+          <option value="en">英語字幕</option>
+          <option value="ja">日本語字幕</option>
+          <option value="ko">韓国語字幕</option>
+          <option value="zh-Hans">中国語字幕</option>
+          <option value="fr">仏語字幕</option>
+          <option value="de">独語字幕</option>
+        </select>
+        <select class="sel" id="tl">
+          <option value="ja">→ 日本語</option>
+          <option value="en">→ 英語</option>
+        </select>
+      </div>
+    </div>
+    <p class="hint">単語をタップ → AI翻訳して単語帳へ（緑=追加済み）</p>
+    <div class="transcript" id="tbox">
+      <div class="empty">
+        <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+        <p class="empty-text">YouTube URLを入力して<br>字幕を取得してください</p>
+      </div>
+    </div>
+    <div class="status" id="st-t"></div>
+  </div>
+  <div class="view" id="view-v">
+    <div class="stats">
+      <div class="stat"><div class="stat-n" id="snt">0</div><div class="stat-l">単語数</div></div>
+      <div class="stat"><div class="stat-n" id="snd">0</div><div class="stat-l">今日追加</div></div>
+    </div>
+    <div class="vocab-list" id="vlist">
+      <div class="empty">
+        <div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg></div>
+        <p class="empty-text">字幕タブで単語をタップして<br>ここに追加しましょう</p>
+      </div>
+    </div>
+    <div class="action-bar">
+      <button class="btn-export" onclick="exportAnki()">Ankiにエクスポート (.txt)</button>
+      <div class="btn-row">
+        <button class="btn-sub" onclick="exportCSV()">CSV出力</button>
+        <button class="btn-sub" onclick="clearAll()">リセット</button>
+      </div>
+    </div>
+    <div class="status" id="st-v"></div>
+  </div>
+</div>
+<script>
+let segs=[],vocab=[],saved=new Set();
+try{vocab=JSON.parse(localStorage.getItem('ytv')||'[]');saved=new Set(vocab.map(v=>v.word.toLowerCase()));}catch(e){}
+function sw(t){['t','v'].forEach(x=>{document.getElementById('tab-'+x).classList.toggle('active',x===t);document.getElementById('view-'+x).classList.toggle('active',x===t);});if(t==='v')renderVocab();}
+function setSt(id,msg,loading){document.getElementById(id).innerHTML=loading?`<span class="spinner"></span>${msg}`:msg;}
+function extractId(url){for(const p of[/youtu\.be\/([^?&\s]+)/,/[?&]v=([^&\s]+)/,/^([a-zA-Z0-9_-]{11})$/]){const m=url.match(p);if(m)return m[1];}return null;}
+function fmt(s){return`${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`;}
+async function fetchSubs(){
+  const url=document.getElementById('yu').value.trim();
+  if(!url)return setSt('st-t','URLを入力してください');
+  const vid=extractId(url);
+  if(!vid)return setSt('st-t','有効なYouTube URLを入力してください');
+  const lang=document.getElementById('lang').value;
+  document.getElementById('fb').disabled=true;
+  setSt('st-t','字幕を取得中...',true);
+  try{
+    const r=await fetch(`/api/subtitles?videoId=${vid}&lang=${lang}`);
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'取得失敗');
+    segs=d.segments;
+    renderTranscript();
+    setSt('st-t',`${segs.length}セグメントを取得しました`);
+  }catch(e){setSt('st-t',`エラー: ${e.message}`);}
+  document.getElementById('fb').disabled=false;
+}
+function renderTranscript(){
+  const box=document.getElementById('tbox');box.innerHTML='';
+  segs.forEach(seg=>{
+    const div=document.createElement('div');div.className='seg';
+    const ts=document.createElement('span');ts.className='ts';ts.textContent=fmt(seg.start);div.appendChild(ts);
+    seg.text.split(/(\s+)/).forEach(tok=>{
+      const clean=tok.replace(/[.,!?;:""''「」。、…]/g,'').trim().toLowerCase();
+      if(!tok.trim()||clean.length<2){div.appendChild(document.createTextNode(tok));return;}
+      const sp=document.createElement('span');
+      sp.className='w'+(saved.has(clean)?' saved':'');
+      sp.textContent=tok;sp.dataset.w=clean;sp.dataset.ctx=seg.text;
+      sp.addEventListener('touchstart',e=>{e.preventDefault();addWord(clean,seg.text,sp);},{passive:false});
+      sp.onclick=()=>addWord(clean,seg.text,sp);
+      div.appendChild(sp);
+    });
+    box.appendChild(div);
+  });
+}
+async function addWord(word,ctx,el){
+  if(saved.has(word)){setSt('st-t',`"${word}" は追加済みです`);return;}
+  saved.add(word);el.classList.add('saved');
+  document.querySelectorAll(`.w[data-w="${CSS.escape(word)}"]`).forEach(e=>e.classList.add('saved'));
+  setSt('st-t',`"${word}" をAI翻訳中...`,true);
+  const entry={word,translation:'',context:ctx,addedAt:new Date().toISOString()};
+  vocab.push(entry);saveVocab();updateBadge();
+  try{
+    const r=await fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({word,targetLang:document.getElementById('tl').value,context:ctx})});
+    const d=await r.json();
+    entry.translation=d.translation||'';saveVocab();
+    setSt('st-t',`"${word}" → ${entry.translation}`);
+    const el2=document.querySelector(`.vcard-trans[data-word="${CSS.escape(word)}"]`);
+    if(el2){el2.textContent=entry.translation||'（翻訳なし）';el2.classList.remove('pending');}
+  }catch(e){setSt('st-t',`"${word}" を追加しました（翻訳エラー）`);}
+}
+function saveVocab(){try{localStorage.setItem('ytv',JSON.stringify(vocab));}catch(e){}}
+function updateBadge(){
+  document.getElementById('nav-count').textContent=vocab.length+'語';
+  document.getElementById('snt').textContent=vocab.length;
+  const today=new Date().toDateString();
+  document.getElementById('snd').textContent=vocab.filter(v=>new Date(v.addedAt).toDateString()===today).length;
+}
+function renderVocab(){
+  const list=document.getElementById('vlist');updateBadge();
+  if(!vocab.length){list.innerHTML='<div class="empty"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg></div><p class="empty-text">字幕タブで単語をタップして<br>ここに追加しましょう</p></div>';return;}
+  list.innerHTML='';
+  [...vocab].reverse().forEach((item,ri)=>{
+    const i=vocab.length-1-ri;
+    const c=document.createElement('div');c.className='vcard';
+    const ip=!item.translation;
+    c.innerHTML=`<div class="vcard-body"><div class="vcard-word">${item.word}</div><div class="vcard-trans ${ip?'pending':''}" data-word="${item.word}">${ip?'翻訳中...':item.translation}</div><div class="vcard-ctx">${item.context||''}</div></div><button class="del-btn" onclick="removeWord(${i})">✕</button>`;
+    list.appendChild(c);
+  });
+}
+function removeWord(i){const w=vocab[i].word;saved.delete(w);vocab.splice(i,1);saveVocab();document.querySelectorAll(`.w[data-w="${CSS.escape(w)}"]`).forEach(e=>e.classList.remove('saved'));renderVocab();}
+function clearAll(){if(!vocab.length)return;if(!confirm(`${vocab.length}語を全て削除しますか？`))return;vocab=[];saved=new Set();saveVocab();document.querySelectorAll('.w.saved').forEach(e=>e.classList.remove('saved'));renderVocab();}
+function exportAnki(){
+  if(!vocab.length){setSt('st-v','単語帳が空です');return;}
+  let txt='';vocab.forEach(item=>{txt+=`${item.word}\t${item.translation||item.word}${item.context?'<br><small><i>'+item.context.replace(/"/g,"'")+'</i></small>':''}\n`;});
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+txt],{type:'text/plain;charset=utf-8'}));a.download='anki_vocab.txt';a.click();
+  setSt('st-v',`Ankiファイルを出力しました（${vocab.length}語）`);
+}
+function exportCSV(){
+  if(!vocab.length)return;
+  let csv='単語,翻訳,文脈,追加日\n';vocab.forEach(item=>{csv+=`"${item.word}","${item.translation||''}","${(item.context||'').replace(/"/g,'""')}","${item.addedAt}"\n`;});
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));a.download='vocab.csv';a.click();
+  setSt('st-v','CSVを出力しました');
+}
+updateBadge();
+</script>
+</body>
+</html>
